@@ -1,0 +1,15 @@
+[package]
+name = "synced-memory"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rayon = "1.10.0"
+
+[dev-dependencies]
+rand = "0.8.5"
+
+[[bench]]
+name = "fibonacci"
+path = "benches/bench.rs"
+harness = false
