@@ -1,5 +1,5 @@
 [package]
-name = "synced-memory"
+name = "synched-memory"
 version = "0.1.0"
 edition = "2024"
 
@@ -13,3 +13,8 @@ rand = "0.8.5"
 name = "fibonacci"
 path = "benches/bench.rs"
 harness = false
+
+[features]
+default = []
+# default = [ "profiler" ]
+profiler = []

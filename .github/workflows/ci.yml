@@ -356,7 +356,7 @@ jobs:
         cat > integration_test/src/main.rs << 'EOF'
         use std::sync::Arc;
         use std::thread;
-        use synced_memory::SynchedMemory;
+        use synched_memory::SynchedMemory;
         use rand::Rng;
 
         fn main() {

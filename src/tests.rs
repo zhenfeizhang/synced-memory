@@ -42,7 +42,7 @@ fn test_coordinated_write_read_cycle() {
             let mem = Arc::clone(&memory);
 
             std::thread::spawn(move || {
-                let local_handler = mem.build_local_handler(thread_id);
+                let mut local_handler = mem.build_local_handler(thread_id);
 
                 // Each thread writes its ID repeated
                 let data = vec![(thread_id + 1) as i32; 3]; // +1 to avoid zeros
@@ -50,7 +50,7 @@ fn test_coordinated_write_read_cycle() {
                 println!("Thread {} writing data: {:?}", thread_id, data);
 
                 // This will coordinate with all other threads
-                let global_data = mem.write_local_memory_and_sync_read(&local_handler, &data);
+                let global_data = mem.write_local_memory_and_sync_read(&mut local_handler, &data);
 
                 println!(
                     "Thread {} read global data (length: {})",
@@ -136,7 +136,7 @@ fn test_multiple_rounds_coordination() {
             let mem = Arc::clone(&memory);
 
             std::thread::spawn(move || {
-                let local_handler = mem.build_local_handler(thread_id);
+                let mut local_handler = mem.build_local_handler(thread_id);
                 let mut round_results = Vec::new();
 
                 for round in 0..NUM_ROUNDS {
@@ -146,7 +146,8 @@ fn test_multiple_rounds_coordination() {
                     let data = vec![(thread_id * 10 + round + 1) as i32; 2];
 
                     // Coordinate write and read
-                    let global_data = mem.write_local_memory_and_sync_read(&local_handler, &data);
+                    let global_data =
+                        mem.write_local_memory_and_sync_read(&mut local_handler, &data);
 
                     // Store the result
                     round_results.push(global_data.clone());
@@ -189,6 +190,8 @@ fn test_multiple_rounds_coordination() {
         })
         .collect();
 
+    memory.finalize();
+
     // Verify all threads saw consistent data in each round
     for round in 0..NUM_ROUNDS {
         let first_thread_data = &all_thread_results[0][round];
@@ -203,6 +206,12 @@ fn test_multiple_rounds_coordination() {
     }
 
     println!("Multi-round coordination test completed successfully!");
+
+    #[cfg(feature = "profiler")]
+    {
+        let time_stat = memory.get_all_timing_stats();
+        time_stat.plot();
+    }
 }
 
 #[test]
@@ -268,7 +277,7 @@ fn test_performance_simple() {
             let mem = Arc::clone(&memory);
 
             std::thread::spawn(move || {
-                let local_handler = mem.build_local_handler(thread_id);
+                let mut local_handler = mem.build_local_handler(thread_id);
                 let mut rng = thread_rng();
 
                 for iteration in 0..NUM_ITERATIONS {
@@ -279,7 +288,8 @@ fn test_performance_simple() {
                         .collect();
 
                     // Write and sync
-                    let _global_data = mem.write_local_memory_and_sync_read(&local_handler, &data);
+                    let _global_data =
+                        mem.write_local_memory_and_sync_read(&mut local_handler, &data);
                 }
             })
         })
