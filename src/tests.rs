@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 use super::*;
 use rand::{RngCore, thread_rng};
 use std::sync::Arc;

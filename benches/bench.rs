@@ -201,7 +201,7 @@ fn main() {
     let total_duration = total_start.elapsed();
 
     // Initialize tracking variables OUTSIDE the results scope
-    let mut per_round_max_computation_times = vec![Duration::ZERO; NUM_ROUNDS];
+    let mut per_round_max_computation_times = [Duration::ZERO; NUM_ROUNDS];
     let mut all_fibonacci_results = Vec::new();
 
     // Analyze results
