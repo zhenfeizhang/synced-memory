@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-rayon = "1.10.0"
 
 [dev-dependencies]
 rand = "0.8.5"
+rayon = "1.10.0"
 
 [[example]]
 # example of how to call this library with rayon

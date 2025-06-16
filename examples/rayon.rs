@@ -33,34 +33,35 @@ fn main() {
     println!("==================================================\n");
 
     // Configuration
-    const NUM_THREADS: usize = 4;
     const MAX_RESULTS_PER_THREAD: usize = 50;
     const NUM_ITERATIONS: usize = 10;
-    const FIBONACCI_INPUTS: [u64; NUM_THREADS] = [35, 36, 37, 38]; // Different workloads per thread
+
+    let num_threads: usize = std::cmp::min(4, rayon::current_num_threads());
+    let fibonacci_inputs = vec![35, 36, 37, 38]; // Different workloads per thread
 
     // Allocate shared memory that will be used by all threads
     let shared_memory = Arc::new(SynchedMemory::<FibonacciResult>::new(
-        NUM_THREADS,
+        num_threads,
         MAX_RESULTS_PER_THREAD,
     ));
 
     println!("📊 Configuration:");
-    println!("  Threads: {}", NUM_THREADS);
+    println!("  Threads: {}", num_threads);
     println!("  Iterations per thread: {}", NUM_ITERATIONS);
-    println!("  Fibonacci inputs: {:?}", FIBONACCI_INPUTS);
+    println!("  Fibonacci inputs: {:?}", fibonacci_inputs);
     println!("  Max results per thread: {}\n", MAX_RESULTS_PER_THREAD);
 
     let start_time = std::time::Instant::now();
 
     // Use Rayon's parallel iterator interface
-    let results: Vec<Vec<FibonacciResult>> = (0..NUM_THREADS)
+    let results: Vec<Vec<FibonacciResult>> = (0..num_threads)
         .into_par_iter()
         .map(|thread_id| {
             println!("🧵 Thread {} starting...", thread_id);
 
             // Each thread gets its own local handler for the shared memory
             let local_handler = shared_memory.build_local_handler(thread_id);
-            let fibonacci_input = FIBONACCI_INPUTS[thread_id];
+            let fibonacci_input = fibonacci_inputs[thread_id];
             let mut thread_results = Vec::new();
 
             // Repeat the computation and sync cycle 10 times
@@ -167,7 +168,7 @@ fn main() {
         stats.plot();
 
         println!("\nPer-thread timing breakdown:");
-        for thread_id in 0..NUM_THREADS {
+        for thread_id in 0..num_threads {
             if let Some(total_comp_time) = stats.thread_total_computation_time(thread_id) {
                 println!(
                     "  Thread {}: {:?} total computation time",

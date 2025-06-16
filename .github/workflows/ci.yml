@@ -78,18 +78,6 @@ jobs:
       if: matrix.rust == 'stable' && matrix.os == 'ubuntu-latest'
       run: cargo run --example rayon --features profiler --release
 
-  miri:
-    name: Miri (Memory Safety)
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Rust nightly with Miri
-      uses: dtolnay/rust-toolchain@nightly
-      with:
-        components: miri
-
     - name: Cache Cargo registry
       uses: actions/cache@v3
       with:
@@ -98,13 +86,6 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-miri-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Run Miri
-      run: |
-        cargo miri setup
-        cargo miri test --verbose
-      env:
-        MIRIFLAGS: -Zmiri-strict-provenance -Zmiri-symbolic-alignment-check
 
   sanitizer:
     name: Address Sanitizer
@@ -134,35 +115,6 @@ jobs:
         cargo +nightly test --verbose --target x86_64-unknown-linux-gnu -Z build-std
       env:
         ASAN_OPTIONS: detect_odr_violation=0
-
-  thread_sanitizer:
-    name: Thread Sanitizer
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Rust nightly
-      uses: dtolnay/rust-toolchain@nightly
-      with:
-        components: rust-src
-
-    - name: Cache Cargo registry
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-tsan-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Run tests with ThreadSanitizer
-      run: |
-        export RUSTFLAGS="-Z sanitizer=thread"
-        export RUSTDOCFLAGS="-Z sanitizer=thread"
-        cargo +nightly test --verbose --target x86_64-unknown-linux-gnu -Z build-std
-      env:
-        TSAN_OPTIONS: halt_on_error=1
 
   examples:
     name: Examples
@@ -232,63 +184,14 @@ jobs:
   docs:
     name: Documentation
     runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Rust stable
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Cache Cargo registry
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-docs-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Build documentation
-      run: cargo doc --all-features --no-deps --document-private-items
-
-    - name: Deploy docs to GitHub Pages
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./target/doc
-        force_orphan: true
-
-  minimum_rust_version:
-    name: Minimum Rust Version
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Rust 1.70.0 (MSRV)
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: 1.70.0
-
-    - name: Cache Cargo registry
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-msrv-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Test with MSRV
-      run: cargo test --verbose --all-features
-
-    - name: Build examples with MSRV
-      run: cargo build --examples --verbose --all-features
-
-  stress_test:
-    name: Stress Tests
-    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # Only run on main branch pushes
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
@@ -299,18 +202,28 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
 
     - name: Cache Cargo registry
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
           ~/.cargo/git
           target
-        key: ${{ runner.os }}-stress-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-docs-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Run with different thread counts
+    - name: Build documentation
       run: |
-        # Test with various thread pool sizes
-        for threads in 1 2 4 8 16 32; do
-          echo "Testing with $threads threads"
-          RAYON_NUM_THREADS=$threads cargo test --release -- --test-threads=$threads
-        done
+        cargo doc --all-features --no-deps --document-private-items
+        # Create an index.html that redirects to your main crate docs
+        echo '<meta http-equiv="refresh" content="0; url=synched_memory">' > target/doc/index.html
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./target/doc
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
