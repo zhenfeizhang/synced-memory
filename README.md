@@ -397,7 +397,7 @@ cargo test --features profiler
 cargo test --features profiler -- --nocapture
 
 # Performance benchmarks
-cargo bench 
+cargo bench
 ```
 
 Test coverage includes:
@@ -466,7 +466,7 @@ cargo clippy --all-features
 ### Performance Testing
 ```bash
 # Run benchmark suite
-cargo bench  --features profiler -- --nocapture
+cargo bench --features profiler -- --nocapture
 ```
 ---
 

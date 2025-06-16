@@ -36,17 +36,17 @@ pub struct Timer {
     pub(crate) completion_timestamp: Arc<ThreadSafeUnsafeCell<Instant>>,
 
     /// Timestamps for the starting time of current block's computation.
-    /// Each thread writes to its own slot: computation_start_time_for_each_block[thread_id]
+    /// Each thread writes to its own slot: computation_start_time_for_each_block\[thread_id\]
     /// Gets overwritten for each new block.
     pub(crate) computation_start_time_for_each_block: Arc<ThreadSafeUnsafeCell<Vec<Instant>>>,
 
     /// Timestamps for the end time of current block's computation.
-    /// Each thread writes to its own slot: computation_end_time_for_each_block[thread_id]
+    /// Each thread writes to its own slot: computation_end_time_for_each_block\[thread_id\]
     /// Gets overwritten for each new block.
     pub(crate) computation_end_time_for_each_block: Arc<ThreadSafeUnsafeCell<Vec<Instant>>>,
 
     /// Computation time for each thread and each block
-    /// Each thread writes to its own vector: computation_time_for_each_thread_and_block[thread_id][block_id]
+    /// Each thread writes to its own vector: computation_time_for_each_thread_and_block\[thread_id\]\[block_id\]
     pub(crate) computation_time_for_each_thread_and_block:
         Arc<ThreadSafeUnsafeCell<Vec<Vec<Duration>>>>,
 }
@@ -167,7 +167,7 @@ pub struct TimingStats {
     pub init_timestamp: Instant,
     /// SynchedMemory completion timestamp
     pub completion_timestamp: Instant,
-    /// Computation times organized by [thread_id][block_id]
+    /// Computation times organized by \[thread_id\]\[block_id\]
     pub computation_times_per_thread: Vec<Vec<Duration>>,
 }
 

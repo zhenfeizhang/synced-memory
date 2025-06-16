@@ -9,6 +9,11 @@ rayon = "1.10.0"
 [dev-dependencies]
 rand = "0.8.5"
 
+[[example]]
+# example of how to call this library with rayon
+name = "rayon"
+path = "examples/rayon.rs"
+
 [[bench]]
 name = "fibonacci"
 path = "benches/bench.rs"

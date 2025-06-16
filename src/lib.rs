@@ -285,6 +285,9 @@ pub struct SynchedMemory<T> {
     /// Uses `UnsafeCell` to allow interior mutability without runtime checks.
     pub(crate) data: Arc<UnsafeCell<Vec<T>>>,
 
+    /// Base pointer to the data - computed once at initialization to avoid data races
+    pub(crate) base_ptr: *mut T,
+
     /// Number of threads that will access this memory.
     pub(crate) num_threads: usize,
 
@@ -399,7 +402,9 @@ where
         assert!(num_threads > 0, "Number of threads must be greater than 0");
 
         let total_size = num_threads * max_size_per_thread;
-        let data = Arc::new(UnsafeCell::new(vec![T::default(); total_size]));
+        let mut data_vec = vec![T::default(); total_size];
+        let base_ptr = data_vec.as_mut_ptr(); // Get the base pointer once
+        let data = Arc::new(UnsafeCell::new(data_vec));
         let write_barrier = Arc::new(Barrier::new(num_threads));
 
         #[cfg(feature = "profiler")]
@@ -407,6 +412,7 @@ where
 
         SynchedMemory {
             data,
+            base_ptr,
             num_threads,
             max_size_per_thread,
             write_barrier,
@@ -541,7 +547,8 @@ where
         }
 
         let start_index = thread_id * self.max_size_per_thread;
-        let data_ptr = unsafe { (*self.data.get()).as_mut_ptr().add(start_index) };
+        // Use the pre-computed base pointer instead of accessing through Vec
+        let data_ptr = unsafe { self.base_ptr.add(start_index) };
 
         #[cfg(feature = "profiler")]
         unsafe {
@@ -792,18 +799,16 @@ where
             );
         }
 
-        // Perform the memory write operation
+        // Most optimized version - if you KNOW your T::default() is all-zeros:
         unsafe {
-            // Clear the entire segment to remove old data
-            let segment_slice =
-                std::slice::from_raw_parts_mut(local_handler.data_ptr, self.max_size_per_thread);
-            for item in segment_slice.iter_mut() {
-                *item = T::default();
+            // Fast memset-style zeroing (only use if T::default() == all-zeros)
+            if std::mem::size_of::<T>() > 0 {
+                // write_bytes writes `max_size_per_thread * size_of::<T>()` bytes
+                std::ptr::write_bytes(local_handler.data_ptr, 0u8, self.max_size_per_thread);
             }
 
             // Write the new data to the segment
-            let data_slice = std::slice::from_raw_parts_mut(local_handler.data_ptr, data.len());
-            data_slice.copy_from_slice(data);
+            std::ptr::copy_nonoverlapping(data.as_ptr(), local_handler.data_ptr, data.len());
         }
     }
 
